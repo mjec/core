@@ -1,0 +1,21 @@
+search:
+  description: Search for content on the Roku platform.
+  fields:
+    entity_id:
+      description: Name(s) of entities that will be snapshot.
+      example: "media_player.roku_tv"
+    keyword:
+      description: The keyword to find.
+      example: "The Neverending Story"
+    type_of_content:
+      description: Limit to this type of content only, one of "movie", "tv-show", "person", "channel", or "game".
+      example: "movie"
+    channels:
+      description: Cannot be specified if limit_to_installed_channels is specified. Only show content from listed channel(s). Channel title must match precisely (e.g. "prime video" will work if you have that app installed, but "prime" will not).
+      example: "Prime Video", "VUDU"
+    limit_to_installed_channels:
+      description: Cannot be specified if channels are specified. Can be True or False (default). If true, only show content from installed channels.
+      example: "true"
+    launch:
+      description: Can be True or False (default). If true, automatically launch the first result from the first available channel.
+      example: "true"

@@ -2,6 +2,8 @@
 import logging
 from typing import List
 
+import voluptuous as vol
+
 from homeassistant.components.media_player import MediaPlayerEntity
 from homeassistant.components.media_player.const import (
     MEDIA_TYPE_APP,
@@ -18,6 +20,7 @@ from homeassistant.components.media_player.const import (
     SUPPORT_VOLUME_STEP,
 )
 from homeassistant.const import STATE_HOME, STATE_IDLE, STATE_PLAYING, STATE_STANDBY
+from homeassistant.helpers import entity_platform
 
 from . import RokuDataUpdateCoordinator, RokuEntity, roku_exception_handler
 from .const import DOMAIN
@@ -38,11 +41,26 @@ SUPPORT_ROKU = (
 )
 
 
+SERVICE_SEARCH = 'search'
+
 async def async_setup_entry(hass, entry, async_add_entities):
     """Set up the Roku config entry."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
     unique_id = coordinator.data.info.serial_number
     async_add_entities([RokuMediaPlayer(unique_id, coordinator)], True)
+
+    platform = entity_platform.current_platform.get()
+    platform.async_register_entity_service(
+        SERVICE_SEARCH,
+        {
+            vol.Required("keyword"): str,
+            type_of_content: ["movie", "tv-show", "person", "channel", "game"],
+            limit_to_installed_channels: bool,
+            channels: [str],
+            launch: bool,
+        },
+        "async_search",
+    )
 
 
 class RokuMediaPlayer(RokuEntity, MediaPlayerEntity):
@@ -244,3 +262,16 @@ class RokuMediaPlayer(RokuEntity, MediaPlayerEntity):
 
         if appl is not None:
             await self.coordinator.roku.launch(appl.app_id)
+
+    @roku_exception_handler
+    async def async_search(self, keyword: str, *, channels: List[str] = None, limit_to_installed_channels: bool = False, **kwargs) -> None:
+        """Search the Roku for content."""
+        if limit_to_installed_channels and channels:
+            _LOGGER.error("Both limit_to_installed_channels and channels were specified, but only one can be used. Using channels.",)
+
+        if channels:
+            kwargs['provider_names'] = channels
+        elif limit_to_installed_channels:
+            kwargs['provider_ids'] = [app.app_id for app in self.coordinator.data.apps]
+
+        await self.coordinator.roku.search(keyword, **kwargs)
